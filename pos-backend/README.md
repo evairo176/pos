@@ -1,14 +1,18 @@
-# POS Multitenant — Backend (Phase 1: Foundation)
+# POS Multitenant — Backend (Phase 1-3 Complete)
 
-Monorepo microservice backend untuk POS Multitenant. Phase 1 mencakup:
+Monorepo microservice backend untuk POS Multitenant. Arsitektur lengkap mencakup:
 
-- **Auth Service** (3001): register, login, refresh, logout, me, forgot/reset password, switch-tenant
-- **Tenant Service** (3002): CRUD tenants, outlets, invite user, schema provisioning
-- **Shared package** (`@pos/shared`): middleware JWT, tenant, RBAC, validate, rate-limit, error
-- **PostgreSQL multi-schema**: `public` (shared) + `tenant_<id>` (per tenant, dibuat dinamis via SQL)
-- **Redis**: refresh token store, reset/invite tokens, rate-limit store
-- **Nginx**: API Gateway reverse proxy
-- **Docker Compose**: orkestrasi dev
+| Service | Port | Deskripsi |
+|---------|------|-----------|
+| **Auth Service** | 3001 | Register, login, JWT, refresh token, RBAC |
+| **Tenant Service** | 3002 | CRUD tenants, outlets, invite user, schema provisioning |
+| **Product Service** | 3003 | CRUD produk, kategori, stock management |
+| **POS Service** | 3004 | Cart, transactions, shifts, refunds |
+| **Report Service** | 3005 | Dashboard, sales reports, analytics |
+| **Shared package** | - | Middleware JWT, tenant, RBAC, validate, rate-limit |
+| **PostgreSQL** | 5432 | Multi-schema: `public` (shared) + `tenant_<id>` |
+| **Redis** | 6379 | Token store, cache, rate-limit |
+| **Nginx** | 8080 | API Gateway reverse proxy |
 
 ## Struktur
 
@@ -27,7 +31,10 @@ pos-backend/
 │       └── types/
 └── services/
     ├── auth-service/          # Express 3001
-    └── tenant-service/        # Express 3002
+    ├── tenant-service/        # Express 3002
+    ├── product-service/     # Express 3003
+    ├── pos-service/          # Express 3004
+    └── report-service/       # Express 3005
 ```
 
 ## Prasyarat
@@ -173,10 +180,12 @@ Setiap service menyediakan dokumentasi interaktif Swagger UI:
 - **Auth Service**: `http://localhost:8080/api/auth/docs`
 - **Tenant Service**: `http://localhost:8080/api/tenants/docs`
 - **Product Service**: `http://localhost:8080/api/products/docs`
+- **POS Service**: `http://localhost:8080/api/cart/docs`
+- **Report Service**: `http://localhost:8080/api/reports/dashboard/docs`
 
 Gunakan tombol **Authorize** di Swagger UI untuk memasukkan `Bearer <access_token>` saat mencoba endpoint yang memerlukan autentikasi.
 
-## API Summary (Phase 1 & 2)
+## API Summary (Phase 1, 2 & 3)
 
 ### Auth Service
 
@@ -224,6 +233,37 @@ Gunakan tombol **Authorize** di Swagger UI untuk memasukkan `Bearer <access_toke
 | POST   | `/api/stock/adjust`          | ✓    | Adjust stock            |
 | POST   | `/api/stock/transfer`        | ✓    | Transfer stock          |
 
+### POS Service (Phase 3)
+
+| Method | Path                            | Auth | Notes                      |
+| ------ | ------------------------------- | ---- | -------------------------- |
+| GET    | `/api/cart`                     | ✓    | Get current cart           |
+| POST   | `/api/cart/items`               | ✓    | Add item to cart           |
+| PUT    | `/api/cart/items/:id`           | ✓    | Update cart item           |
+| DELETE | `/api/cart/items/:id`           | ✓    | Remove cart item           |
+| DELETE | `/api/cart`                     | ✓    | Clear cart                 |
+| GET    | `/api/transactions`             | ✓    | List transactions          |
+| GET    | `/api/transactions/:id`         | ✓    | Get transaction detail     |
+| POST   | `/api/transactions`             | ✓    | Create transaction         |
+| POST   | `/api/transactions/:id/void`    | ✓    | Void transaction           |
+| GET    | `/api/shifts`                   | ✓    | List shifts                |
+| GET    | `/api/shifts/current`           | ✓    | Get current shift          |
+| POST   | `/api/shifts/open`              | ✓    | Open shift                 |
+| POST   | `/api/shifts/:id/close`         | ✓    | Close shift                |
+| GET    | `/api/refunds`                  | ✓    | List refunds               |
+| GET    | `/api/refunds/:id`              | ✓    | Get refund detail          |
+| POST   | `/api/refunds`                  | ✓    | Create refund              |
+
+### Report Service (Phase 3)
+
+| Method | Path                             | Auth | Notes                      |
+| ------ | -------------------------------- | ---- | -------------------------- |
+| GET    | `/api/reports/dashboard/summary` | ✓    | Dashboard summary          |
+| GET    | `/api/reports/dashboard/comparison` | ✓ | Sales comparison          |
+| GET    | `/api/reports/sales`            | ✓    | Sales report               |
+| GET    | `/api/reports/sales/products`   | ✓    | Product sales report       |
+| GET    | `/api/reports/sales/cashiers`   | ✓    | Cashier performance        |
+
 ## Catatan Teknikal
 
 - **Prisma multi-schema**: hanya `public` dikelola Prisma. Schema tenant dibuat via raw SQL supaya dinamis. Prisma 5 `multiSchema` preview dipakai.
@@ -233,9 +273,10 @@ Gunakan tombol **Authorize** di Swagger UI untuk memasukkan `Bearer <access_toke
 
 ## Pending / Next Phases
 
-- POS service (transactions, cart, payment, receipt)
-- Report service (analytics, export)
-- Notification service (email, push)
-- Migration strategy untuk mengubah `tenant-schema.sql` dan propagate ke semua `tenant_*` schemas (belum diimplementasi)
+- Notification service (email, push) - Phase 4
+- Migration strategy untuk mengubah `tenant-schema.sql` dan propagate ke semua `tenant_*` schemas
 - Production-grade migrations (Prisma migrate deploy + tenant DDL versioning)
 - Email integration untuk invite & password reset
+- Payment gateway integration (Midtrans, Xendit)
+- Kitchen Display System (KDS) untuk F&B
+- Loyalty program & membership tiers

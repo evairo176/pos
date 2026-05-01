@@ -15,6 +15,8 @@ services:
       - auth-service
       - tenant-service
       - product-service
+      - pos-service
+      - report-service
     networks:
       - pos_network
 
@@ -87,6 +89,46 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    networks:
+      - pos_network
+
+  # ==========================
+  # POS Service
+  # ==========================
+  pos-service:
+    build:
+      context: .
+      dockerfile: services/pos-service/Dockerfile
+    container_name: pos_pos_service
+    ports:
+      - "3004:3004"
+    env_file:
+      - .env.pos-service
+    depends_on:
+      redis:
+        condition: service_healthy
+      product-service:
+        condition: service_started
+    networks:
+      - pos_network
+
+  # ==========================
+  # Report Service
+  # ==========================
+  report-service:
+    build:
+      context: .
+      dockerfile: services/report-service/Dockerfile
+    container_name: pos_report_service
+    ports:
+      - "3005:3005"
+    env_file:
+      - .env.report-service
+    depends_on:
+      redis:
+        condition: service_healthy
+      pos-service:
+        condition: service_started
     networks:
       - pos_network
 
