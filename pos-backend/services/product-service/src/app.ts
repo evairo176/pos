@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 // import { errorHandler, notFoundHandler } from '@pos/shared';
+import "./types"; // Load type augmentations
 import productRoutes from "./routes/product.routes";
 import categoryRoutes from "./routes/category.routes";
 import stockRoutes from "./routes/stock.routes";

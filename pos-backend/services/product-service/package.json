@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "tsc",
+    "build": "prisma generate --schema=../../prisma/schema.prisma && tsc",
     "dev": "ts-node-dev src/server.ts",
     "start": "node dist/server.js"
   },

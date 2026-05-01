@@ -1,5 +1,5 @@
 # ---------- Builder ----------
-FROM node:20-slim AS builder
+FROM node:20 AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
@@ -17,9 +17,12 @@ RUN npm run build -w @pos/shared
 RUN npm run build -w product-service
 
 # ---------- Runner ----------
-FROM node:20-slim AS runner
+FROM node:20 AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+
+# Install OpenSSL 1.1 for Prisma compatibility
+RUN apt-get update -y && apt-get install -y openssl libssl-dev
 
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/node_modules ./node_modules
