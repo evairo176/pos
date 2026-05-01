@@ -1,0 +1,109 @@
+// Shared Prisma schema for PUBLIC schema (shared across tenants).
+// Both auth-service and tenant-service use this model set.
+// Tenant-specific schemas (tenant_<id>) are created via raw SQL (see scripts/tenant-schema.sql).
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+  binaryTargets   = ["native", "linux-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["public"]
+}
+
+model Plan {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String   @db.VarChar(50)
+  max_outlets   Int      @default(1)
+  max_products  Int      @default(100)
+  max_users     Int      @default(5)
+  price_monthly Decimal  @default(0) @db.Decimal(12, 2)
+  price_yearly  Decimal  @default(0) @db.Decimal(12, 2)
+  features      Json     @default("{}")
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now()) @db.Timestamptz()
+  updated_at    DateTime @updatedAt @db.Timestamptz()
+
+  tenants       Tenant[]
+  subscriptions Subscription[]
+
+  @@map("plans")
+  @@schema("public")
+}
+
+model Tenant {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(100)
+  slug        String   @unique @db.VarChar(100)
+  schema_name String   @unique @db.VarChar(100)
+  plan_id     String?  @db.Uuid
+  owner_email String   @db.VarChar(255)
+  logo_url    String?
+  status      String   @default("active") @db.VarChar(20)
+  settings    Json     @default("{}")
+  created_at  DateTime @default(now()) @db.Timestamptz()
+  updated_at  DateTime @updatedAt @db.Timestamptz()
+
+  plan          Plan?          @relation(fields: [plan_id], references: [id])
+  subscriptions Subscription[]
+  tenant_users  TenantUser[]
+
+  @@map("tenants")
+  @@schema("public")
+}
+
+model Subscription {
+  id                   String    @id @default(uuid()) @db.Uuid
+  tenant_id            String    @db.Uuid
+  plan_id              String?   @db.Uuid
+  status               String    @default("active") @db.VarChar(20)
+  trial_ends_at        DateTime? @db.Timestamptz()
+  current_period_start DateTime? @db.Timestamptz()
+  current_period_end   DateTime? @db.Timestamptz()
+  created_at           DateTime  @default(now()) @db.Timestamptz()
+  updated_at           DateTime  @updatedAt @db.Timestamptz()
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  plan   Plan?  @relation(fields: [plan_id], references: [id])
+
+  @@map("subscriptions")
+  @@schema("public")
+}
+
+model UserGlobal {
+  id             String    @id @default(uuid()) @db.Uuid
+  email          String    @unique @db.VarChar(255)
+  password_hash  String    @db.VarChar(255)
+  full_name      String    @db.VarChar(100)
+  phone          String?   @db.VarChar(20)
+  avatar_url     String?
+  is_super_admin Boolean   @default(false)
+  is_active      Boolean   @default(true)
+  last_login_at  DateTime? @db.Timestamptz()
+  created_at     DateTime  @default(now()) @db.Timestamptz()
+  updated_at     DateTime  @updatedAt @db.Timestamptz()
+
+  tenant_users TenantUser[]
+
+  @@map("users_global")
+  @@schema("public")
+}
+
+model TenantUser {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenant_id  String   @db.Uuid
+  user_id    String   @db.Uuid
+  role       String   @db.VarChar(20) // owner, manager, cashier
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz()
+
+  tenant Tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  user   UserGlobal @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, user_id])
+  @@map("tenant_users")
+  @@schema("public")
+}

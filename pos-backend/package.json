@@ -1,0 +1,28 @@
+{
+  "name": "pos-backend",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "services/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "dev:auth": "npm run dev -w auth-service",
+    "dev:tenant": "npm run dev -w tenant-service",
+    "prisma:generate": "npm run prisma:generate -w auth-service && npm run prisma:generate -w tenant-service",
+    "prisma:migrate": "npm run prisma:migrate -w tenant-service",
+    "db:seed": "ts-node scripts/seed.ts",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "ts-node": "^10.9.2",
+    "@types/node": "^20.12.7"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
